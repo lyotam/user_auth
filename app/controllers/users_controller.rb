@@ -14,12 +14,10 @@ class UsersController < ApplicationController
 
   def create
     @user = User.new(user_params)
-    puts @user.inspect
     
     if @user.save
       render_user
     else
-      # todo - add validation error handling
       render json: @user.errors.full_messages, status: 400
     end
   end
@@ -73,7 +71,7 @@ class UsersController < ApplicationController
   end
 
   def render_user
-    render :json => @user, :only => [:first_name, :last_name, :email]
+    render :json => @user, :only => [:id, :first_name, :last_name, :email]
   end
 
 end
