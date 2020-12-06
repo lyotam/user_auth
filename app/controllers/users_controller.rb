@@ -1,5 +1,7 @@
 class UsersController < ApplicationController
 
+  include ActionController::Cookies
+
   def index
     @users = User.all
     render :json => @users, :only => [:first_name, :last_name, :email]
@@ -39,16 +41,18 @@ class UsersController < ApplicationController
   def sign_in
     # todo: add email & password format validation
 
-    #User.where("email = ? AND passwprd = ?", params[:email], params[:password])
-    @user = User.find_by email: params[:email] 
+    @user = User.find_by email: params[:email]
+    puts params.inspect
     
     if @user && @user.password == params[:password]
       token = SecureRandom.base64
       @user.token = token
       @user.save
 
-      if @user.valid
-        cookies[:token] = token    
+      if @user.valid?
+        puts "token: " + token
+        cookies[:token] = token 
+        puts "cookie: " + cookies[:token]   
         render_user    
       end
     end
@@ -57,10 +61,7 @@ class UsersController < ApplicationController
   def sign_out
     token = cookies[:token]
     if token
-      @user = User.where(token: token)
       cookies.delete(:token)
-      @user.token = nil
-      @user.save!
     end
   end
 
