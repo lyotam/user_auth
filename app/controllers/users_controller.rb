@@ -2,57 +2,46 @@ class UsersController < ApplicationController
 
   include ActionController::Cookies
 
+  before_action :validate_user_auth, only: [:show, :update]
+
   def index
     @users = User.all
     render :json => @users, :only => [:first_name, :last_name, :email]
   end
 
   def show
-    @user = User.find(params[:id])
     render_user
   end
 
   def create
     @user = User.new(user_params)
-    
     if @user.save
       render_user
     else
-      render json: @user.errors.full_messages, status: 400
+      bad_request_error
     end
   end
 
   def update
-    @user = User.find(params[:id])
-    if @user && @user.token == cookies[:token]
-      if @user.update(user_params)
-        render_user
-      else
-        #todo: update failed
-      end
+    if @user.update(user_params)
+      render_user
     else
-      #todo: failed auth - invalid session token
+      bad_request_error
     end
   end
 
   
   def sign_in
-    # todo: add email & password format validation
-
     @user = User.find_by email: params[:email]
-    puts params.inspect
     
     if @user && @user.password == params[:password]
       token = SecureRandom.base64
       @user.token = token
       @user.save
-
-      if @user.valid?
-        puts "token: " + token
-        cookies[:token] = token 
-        puts "cookie: " + cookies[:token]   
-        render_user    
-      end
+      cookies[:token] = token 
+      render_user    
+    else
+      not_authorized_error("wrong credentials")
     end
   end
 
@@ -72,6 +61,23 @@ class UsersController < ApplicationController
 
   def render_user
     render :json => @user, :only => [:id, :first_name, :last_name, :email]
+  end  
+
+  def bad_request_error
+    render json: {"#{'error'.pluralize(@user.errors.count)}": 
+                  @user.errors.full_messages}, 
+                  status: 400
+  end
+
+  def not_authorized_error(message)
+    render json: {"error": message}, status: 401
+  end
+
+  def validate_user_auth
+    @user = User.find(params[:id])
+    unless @user && @user.token == cookies[:token]
+      not_authorized_error("Not authorized to access this user")
+    end
   end
 
 end
